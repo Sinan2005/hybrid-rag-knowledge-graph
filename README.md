@@ -1,204 +1,328 @@
-# Hybrid RAG using Knowledge Graphs and Vector Search
+# Hybrid RAG: Combining Vector Search and Knowledge Graphs for Enhanced Retrieval
 
-## Overview
+## Project Overview
 
-This project compares three Retrieval-Augmented Generation (RAG) approaches:
+Retrieval-Augmented Generation (RAG) systems improve Large Language Models (LLMs) by providing external knowledge during inference. Traditional RAG systems rely solely on vector similarity search, which is effective for retrieving semantically relevant document chunks but often struggles to explicitly capture relationships between concepts.
 
-1. Vector RAG
-2. Graph RAG
-3. Hybrid RAG
+This project explores three different retrieval architectures:
 
-The goal is to investigate whether combining vector retrieval with knowledge graph retrieval improves answer quality compared to traditional vector-based retrieval.
+1. **Vector RAG**
+2. **Graph RAG**
+3. **Hybrid RAG (Vector + Graph)**
 
-The project uses:
+The objective is to evaluate whether combining vector retrieval with knowledge graph retrieval can improve answer quality, context coverage, and reasoning capabilities.
 
-- ChromaDB for vector storage
-- Neo4j for knowledge graph storage
-- Groq Llama 3.3 70B for inference
-- HuggingFace Embeddings
-- RAGAS for evaluation
+The entire system was built using LangChain, Neo4j, ChromaDB, Groq Llama 3.3 70B, and RAGAS.
 
 ---
 
-## Architecture
+# Motivation
 
-### Vector RAG
+Traditional Vector RAG retrieves information based on semantic similarity.
+
+Example:
+
+Question:
+
+```text
+How does Flash Attention improve Transformers?
+```
+
+Vector retrieval may return:
+
+```text
+Flash Attention reduces memory consumption.
+
+Transformers use self-attention.
+```
+
+Although both chunks are relevant, the relationship between them is not explicitly represented.
+
+Knowledge Graphs can store relationships directly:
+
+```text
+Transformer IMPROVES Flash Attention
+```
+
+This project investigates whether combining both retrieval mechanisms can provide more complete and relevant answers.
+
+---
+
+# System Architecture
+
+## 1. Document Processing Pipeline
 
 PDF Documents
-→ Chunking
-→ Embeddings
-→ ChromaDB
-→ Similarity Search
-→ LLM
+↓
+PyMuPDFLoader
+↓
+Text Extraction
+↓
+Recursive Character Text Splitting
+↓
+Chunks
 
-### Graph RAG
+### Chunking Parameters
 
-PDF Documents
-→ Entity & Relationship Extraction
-→ Neo4j Knowledge Graph
-→ Graph Retrieval
-→ LLM
+```python
+chunk_size = 1000
+chunk_overlap = 200
+```
 
-### Hybrid RAG
+Purpose:
 
-PDF Documents
-→ ChromaDB Retrieval
-+
+- Preserve context across chunks
+- Improve retrieval quality
+- Reduce information loss
+
+---
+
+# 2. Vector RAG Pipeline
+
+PDF Chunks
+↓
+Sentence Transformers Embeddings
+↓
+ChromaDB
+↓
+Similarity Search
+↓
+Retrieved Context
+↓
+LLM
+
+### Embedding Model
+
+```text
+sentence-transformers/all-MiniLM-L6-v2
+```
+
+### Vector Database
+
+```text
+ChromaDB
+```
+
+### Retrieval Method
+
+```python
+similarity_search(question, k=4)
+```
+
+Top 4 semantically similar chunks are retrieved.
+
+---
+
+# 3. Knowledge Graph Construction
+
+To build the graph, each chunk is processed by the LLM.
+
+The model extracts:
+
+- Entities
+- Relationships
+
+Example Output:
+
+```json
+{
+  "entities": [
+    "Transformer",
+    "Self-Attention"
+  ],
+  "relationships": [
+    {
+      "source": "Transformer",
+      "target": "Self-Attention",
+      "relation": "USES"
+    }
+  ]
+}
+```
+
+---
+
+# Graph Storage
+
+Neo4j stores:
+
+### Nodes
+
+```text
+Transformer
+Self-Attention
+BERT
+GPT
+RAG
+```
+
+### Relationships
+
+```text
+USES
+CONTAINS
+BUILT_ON
+TRAINED_WITH
+IMPROVES
+APPLIES_TO
+```
+
+Example:
+
+```text
+Transformer
+      |
+      USES
+      |
+Self-Attention
+```
+
+---
+
+# Cypher Queries Used
+
+### Create Entity
+
+```cypher
+MERGE (e:Entity {name:$name})
+```
+
+### Create Relationship
+
+```cypher
+MERGE (a:Entity {name:$source})
+MERGE (b:Entity {name:$target})
+MERGE (a)-[:USES]->(b)
+```
+
+### Graph Retrieval
+
+```cypher
+MATCH (a)-[r]-(b)
+
+WHERE toLower(a.name)
+CONTAINS toLower($entity)
+
+RETURN
+    a.name,
+    type(r),
+    b.name
+
+LIMIT 50
+```
+
+---
+
+# 4. Graph RAG Pipeline
+
+Question
+↓
+Entity Extraction
+↓
 Neo4j Retrieval
-→ Combined Context
-→ LLM
+↓
+Graph Facts
+↓
+LLM
+
+Example Retrieved Facts:
+
+```text
+Transformer USES Self-Attention
+
+Transformer IMPROVES Flash Attention
+
+BERT BUILT_ON Transformer
+```
 
 ---
 
-## Features
+# 5. Hybrid RAG Pipeline
 
-- PDF document ingestion
-- Automatic chunking
-- Vector database retrieval
-- Knowledge graph construction
-- Entity and relationship extraction
-- Hybrid retrieval pipeline
-- Benchmarking on custom questions
-- RAGAS evaluation
+Question
+↓
+Vector Retrieval
+↓
+Graph Retrieval
+↓
+Combined Context
+↓
+LLM
+
+Context supplied to the LLM:
+
+```text
+Vector Context:
+...
+
+Graph Facts:
+...
+```
+
+The model receives both detailed document information and explicit relationships.
 
 ---
 
-## Tech Stack
+# Technologies Used
 
-### LLM
+## LLM
 
 - Groq
 - Llama 3.3 70B Versatile
 
-### Vector Database
-
-- ChromaDB
-
-### Knowledge Graph
-
-- Neo4j
-
-### Frameworks
+## Frameworks
 
 - LangChain
 - LangChain Community
 - LangChain Groq
 
-### Evaluation
+## Vector Search
+
+- ChromaDB
+- Sentence Transformers
+
+## Knowledge Graph
+
+- Neo4j
+
+## Evaluation
 
 - RAGAS
 
-### Embeddings
+## Data Processing
 
-- sentence-transformers/all-MiniLM-L6-v2
-
----
-
-## Project Structure
-
-```text
-Hybrid-RAG/
-│
-├── data/
-│   └── PDF files
-│
-├── chroma_db/
-│
-├── evaluation/
-│   ├── questions.csv
-│   ├── hybrid_rag_results.csv
-│   ├── hybrid_ragas_eval.py
-│   └── hybrid_ragas_results.csv
-│
-├── graph_builder.py
-├── graph_benchmark.py
-├── hybrid_benchmark.py
-├── vector_benchmark.py
-│
-├── requirements.txt
-├── .env.example
-├── .gitignore
-└── README.md
-```
+- Pandas
+- PyMuPDF
 
 ---
 
-## Environment Variables
+# Evaluation Methodology
 
-Create a `.env` file:
+The systems were evaluated using RAGAS on a custom benchmark dataset.
 
-```env
-GROQ_API_KEY=your_groq_key
+Metrics used:
 
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=your_password
-```
+### Faithfulness
 
----
+Measures whether the generated answer is supported by the retrieved context.
 
-## Installation
+### Answer Relevancy
 
-Clone the repository:
+Measures how well the answer addresses the user's question.
 
-```bash
-git clone https://github.com/yourusername/hybrid-rag-knowledge-graph.git
-cd hybrid-rag-knowledge-graph
-```
+### Context Precision
 
-Create virtual environment:
+Measures how much of the retrieved context is actually useful.
 
-```bash
-python -m venv venv
-```
+### Context Recall
 
-Activate:
-
-Windows:
-
-```bash
-venv\Scripts\activate
-```
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
+Measures how much relevant information was successfully retrieved.
 
 ---
 
-## Running the Project
+# Results
 
-### Build Knowledge Graph
-
-```bash
-python graph_builder.py
-```
-
-### Run Vector Benchmark
-
-```bash
-python vector_benchmark.py
-```
-
-### Run Hybrid Benchmark
-
-```bash
-python hybrid_benchmark.py
-```
-
-### Evaluate using RAGAS
-
-```bash
-python hybrid_ragas_eval.py
-```
-
----
-
-## Evaluation Results
-
-### Vector RAG
+## Vector RAG
 
 | Metric | Score |
 |----------|----------|
@@ -207,7 +331,9 @@ python hybrid_ragas_eval.py
 | Context Precision | 0.6889 |
 | Context Recall | 0.6667 |
 
-### Graph RAG
+---
+
+## Graph RAG
 
 | Metric | Score |
 |----------|----------|
@@ -216,7 +342,9 @@ python hybrid_ragas_eval.py
 | Context Precision | 0.0304 |
 | Context Recall | 0.2333 |
 
-### Hybrid RAG (Updated)
+---
+
+## Hybrid RAG (Final Version)
 
 | Metric | Score |
 |----------|----------|
@@ -227,35 +355,83 @@ python hybrid_ragas_eval.py
 
 ---
 
-## Key Findings
+# Analysis
 
-### Vector RAG
+## Why Vector RAG Achieved Higher Faithfulness
 
-- Highest faithfulness
-- Highest context precision
-- Strong grounding in source documents
+Vector RAG retrieves original document chunks directly from the source PDFs.
 
-### Hybrid RAG
+The LLM mostly summarizes retrieved information rather than inferring new facts.
 
-- Highest answer relevancy
-- Highest context recall
-- Better understanding of relationships between concepts
-
-### Graph RAG
-
-- Useful for relationship reasoning
-- Loses detailed document information when used alone
+This leads to highly grounded answers.
 
 ---
 
-## Conclusion
+## Why Hybrid RAG Achieved Higher Answer Relevancy
 
-The results demonstrate that Hybrid RAG combines the strengths of vector retrieval and graph retrieval. While Vector RAG provides highly faithful answers grounded in source documents, Hybrid RAG improves answer relevancy and retrieval coverage by incorporating structured knowledge from a knowledge graph.
+Hybrid RAG combines:
+
+- Detailed textual context
+- Explicit graph relationships
+
+The graph provides structured knowledge that helps the model better understand how concepts are connected.
+
+This results in answers that are more focused on the user's question.
 
 ---
 
-## Author
+## Why Hybrid RAG Improved Context Recall
 
-**Sinan Tamake**
+Information is retrieved from two independent sources:
 
-Machine Learning & Generative AI Enthusiast
+1. ChromaDB
+2. Neo4j
+
+Even if vector search misses some information, graph retrieval can provide additional relevant facts.
+
+This improves overall retrieval coverage.
+
+---
+
+# Key Learnings
+
+Through this project I learned:
+
+- Retrieval-Augmented Generation (RAG)
+- Vector Databases
+- ChromaDB
+- Knowledge Graph Construction
+- Neo4j
+- Cypher Query Language
+- LangChain
+- Hybrid Retrieval Architectures
+- Entity and Relationship Extraction
+- LLM Evaluation using RAGAS
+- Retrieval Metrics Analysis
+- Prompt Engineering
+
+---
+
+# Future Improvements
+
+- Graph-aware retrievers
+- Entity linking and disambiguation
+- Hybrid ranking strategies
+- Larger benchmark datasets
+- Multi-hop graph reasoning
+- Agentic RAG using LangGraph
+- Graph embeddings
+
+---
+
+# Author
+
+## Sinan Tamake
+
+Machine Learning | Deep Learning | Generative AI
+
+Project Focus:
+- RAG Systems
+- Knowledge Graphs
+- LLM Evaluation
+- Agentic AI
