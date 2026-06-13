@@ -1,0 +1,31 @@
+question,ground_truth
+What architecture was introduced in Attention Is All You Need?,Transformer
+What mechanism replaces recurrence in the Transformer?,Self-attention
+What are the two main components of the Transformer architecture?,Encoder and Decoder
+How many encoder layers are used in the base Transformer?,6
+How many decoder layers are used in the base Transformer?,6
+What dimension is used for model embeddings in the base Transformer?,512
+What is the purpose of Multi-Head Attention?,Attend to information from different representation subspaces
+What is Scaled Dot-Product Attention?,Attention using scaled query-key dot products
+Why is positional encoding needed?,To provide sequence order information
+What benchmark did the Transformer achieve 28.4 BLEU on?,WMT 2014 English-to-German translation
+What does BERT stand for?,Bidirectional Encoder Representations from Transformers
+What type of Transformer does BERT use?,Bidirectional Transformer Encoder
+What is the main pretraining objective used by BERT?,Masked Language Modeling
+What additional pretraining task does BERT use?,Next Sentence Prediction
+Why is BERT considered bidirectional?,It attends to both left and right context
+How many layers does BERT Base have?,12
+How many parameters does BERT Base contain?,110 million
+How many layers does BERT Large have?,24
+How many parameters does BERT Large contain?,340 million
+How is BERT different from GPT?,BERT is bidirectional while GPT is autoregressive
+What is the title of the GPT-3 paper?,Language Models are Few-Shot Learners
+How many parameters does GPT-3 have?,175 billion
+What learning capability is emphasized in GPT-3?,Few-shot learning
+What is in-context learning?,Learning from examples provided in the prompt
+Does GPT-3 require fine-tuning for evaluated tasks?,No
+What are the three evaluation settings used in GPT-3?,Zero-shot One-shot Few-shot
+What is the largest GPT-3 model size reported?,175B
+What architecture does GPT-3 use?,Autoregressive Transformer
+What is a major limitation of traditional fine-tuning according to the paper?,Need for task-specific datasets
+How does performance change with model scale?,Larger models improve few-shot performance
